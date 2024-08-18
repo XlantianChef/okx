@@ -1,0 +1,70 @@
+# -*- coding:utf-8 -*-
+#
+ 
+import requests
+import time
+import hmac
+import hashlib
+import base64
+import datetime
+import json
+
+# OKX API的基础URL
+BASE_URL = "https://www.okx.com/api/v5"
+
+# 你的API密钥、密钥和密码
+API_KEY = "7c0dbc73-3010-4507-8c09-54f11a3e052c"
+API_SECRET = "8FE6911D05538558816392F285C6D35F"
+PASSPHRASE = "Qq123456789!"
+
+# 定义生成签名的函数
+def generate_signature(api_secret,timestamp,params):  
+    signature1 = hmac.new(api_secret.encode('latin-1'), (timestamp + 'POST' + '/api/v5/trade/order' + str(params)).encode('latin-1'), hashlib.sha256).digest() 
+    signature = base64.standard_b64encode(signature1).decode('latin-1') 
+    return signature  
+
+# 定义下单的函数
+def place_order():
+    # 构建请求的URL和参数
+    url = f"{BASE_URL}/trade/order"
+    endpoint = "POST"
+    
+    # 请求参数
+    params = {'instId': 'DOGE-USDT-SWAP',
+        'tdMode': 'cross',
+        'ccy': 'USDT',
+        'side': 'sell',
+        'ordType': 'market',
+        'sz': '0.3'}
+    
+    params = json.dumps(params)
+    # print(params)
+    # 生成签名 
+    timestamp = int(time.time() * 1000)
+    utc = datetime.datetime.fromtimestamp(timestamp // 1000, datetime.timezone.utc)
+    timestamp =  utc.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-6] + "{:03d}".format(int(timestamp) % 1000) + 'Z'  
+    signature = generate_signature(API_SECRET, timestamp,params)
+    headers = {
+        "OK-ACCESS-KEY": API_KEY,
+        "OK-ACCESS-SIGN": signature,
+        "OK-ACCESS-TIMESTAMP": timestamp,
+        "OK-ACCESS-PASSPHRASE": PASSPHRASE,
+        "Content-Type": "application/json; charset=utf-8"
+    }
+    
+    # 发送POST请求
+    response = requests.post(url, headers=headers, data=params)
+    
+    # 检查响应状态码
+    if response.status_code == 200:
+        # 请求成功，打印订单信息
+        print("Order placed successfully:", response.json())
+    else:
+        # 请求失败，打印错误信息
+        print("Failed to place order:", response.text)
+
+# 使用示例
+place_order()
+
+
+
